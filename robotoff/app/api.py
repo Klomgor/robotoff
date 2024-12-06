@@ -134,15 +134,19 @@ def get_countries_from_req(req: falcon.Request) -> Optional[list[Country]]:
         )
 
 
-def _get_skip_voted_on(
-    auth: Optional[OFFAuthentication], device_id: str
-) -> SkipVotedOn:
-    """Helper function for constructing SkipVotedOn objects based on request
-    params."""
+def _get_skip_voted_on(auth: OFFAuthentication | None, device_id: str) -> SkipVotedOn:
+    """Create a SkipVotedOn object based on request params.
+    This object is used to determine if the user has already voted on the insight.
+
+    If the user is not authenticated, the device_id (either an ID sent by the client or
+    the IP address as fallback) is used.
+
+    If the user is authenticated, the username is used.
+    """
     if not auth:
         return SkipVotedOn(SkipVotedType.DEVICE_ID, device_id)
 
-    username: Optional[str] = auth.get_username()
+    username: str | None = auth.get_username()
     if not username:
         return SkipVotedOn(SkipVotedType.DEVICE_ID, device_id)
 
@@ -208,8 +212,9 @@ class InsightCollection:
         brands = req.get_param_as_list("brands") or None
         predictor = req.get_param("predictor")
         server_type = get_server_type_from_req(req)
-        countries: Optional[list[Country]] = get_countries_from_req(req)
-        order_by: Optional[str] = req.get_param("order_by")
+        countries: list[Country] | None = get_countries_from_req(req)
+        order_by: str | None = req.get_param("order_by")
+        campaigns: list[str] | None = req.get_param_as_list("campaigns") or None
 
         if order_by not in ("random", "popularity", None):
             raise falcon.HTTPBadRequest(
@@ -224,6 +229,12 @@ class InsightCollection:
             # Limit the number of brands to prevent slow SQL queries
             brands = brands[:10]
 
+        device_id = device_id_from_request(req)
+        auth: OFFAuthentication | None = parse_auth(req)
+        avoid_voted_on = _get_skip_voted_on(auth, device_id)
+        # Counting the number of insights that match the vote
+        # criteria can be very costly, so we limit the count to 100
+        max_count = 100
         get_insights_ = functools.partial(
             get_insights,
             server_type=server_type,
@@ -236,6 +247,9 @@ class InsightCollection:
             barcode=barcode,
             predictor=predictor,
             order_by=order_by,
+            campaigns=campaigns,
+            avoid_voted_on=avoid_voted_on,
+            max_count=max_count,
         )
 
         offset: int = (page - 1) * count
@@ -820,18 +834,20 @@ class ImagePredictionResource:
     def on_get(self, req: falcon.Request, resp: falcon.Response):
         count: int = req.get_param_as_int("count", min_value=1, default=25)
         page: int = req.get_param_as_int("page", min_value=1, default=1)
-        with_logo: Optional[bool] = req.get_param_as_bool("with_logo", default=False)
-        model_name: Optional[str] = req.get_param("model_name")
-        type_: Optional[str] = req.get_param("type")
-        model_version: Optional[str] = req.get_param("model_version")
-        barcode: Optional[str] = normalize_req_barcode(req.get_param("barcode"))
-        min_confidence: Optional[float] = req.get_param_as_float("min_confidence")
+        with_logo: bool | None = req.get_param_as_bool("with_logo", default=None)
+        model_name: str | None = req.get_param("model_name")
+        type_: str | None = req.get_param("type")
+        model_version: str | None = req.get_param("model_version")
+        barcode: str | None = normalize_req_barcode(req.get_param("barcode"))
+        image_id: str | None = req.get_param("image_id")
+        min_confidence: float | None = req.get_param_as_float("min_confidence")
         server_type = get_server_type_from_req(req)
 
         get_image_predictions_ = functools.partial(
             get_image_predictions,
             with_logo=with_logo,
             barcode=barcode,
+            image_id=image_id,
             type=type_,
             server_type=server_type,
             model_name=model_name,
@@ -1474,8 +1490,7 @@ def get_questions_resource_on_get(
     avoid_voted_on = _get_skip_voted_on(auth, device_id)
     # Counting the number of insights that match the vote
     # criteria can be very costly, so we limit the count to 100
-    # if avoid_voted_on is not None
-    max_count = 100 if avoid_voted_on is not None else None
+    max_count = 100
     get_insights_ = functools.partial(
         get_insights,
         server_type=server_type,
