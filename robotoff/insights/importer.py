@@ -45,6 +45,7 @@ from robotoff.types import (
     ServerType,
 )
 from robotoff.utils import get_logger, text_file_iter
+from robotoff.utils.cache import function_cache_register
 
 logger = get_logger(__name__)
 
@@ -1540,18 +1541,63 @@ class NutrientExtractionImporter(InsightImporter):
         predictions: list[Prediction],
         product_id: ProductIdentifier,
     ) -> Iterator[ProductInsight]:
+        if product and product.nutrition_data_prepared:
+            # Don't generate candidates if the product has nutrition
+            # information per prepared product, as the model doesn't
+            # handle this case
+            return
+
         for prediction in predictions:
-            if product is not None and product.nutriments:
-                current_keys = set(key for key in product.nutriments.keys())
-                prediction_keys = set(prediction.data["nutrients"].keys())
+            if cls.keep_prediction(product, list(prediction.data["nutrients"].keys())):
+                yield ProductInsight(**prediction.to_dict())
 
-                # If the prediction brings a nutrient value that is missing in
-                # the product, we generate an insight, otherwise we
-                # skip it
-                if not len(prediction_keys - current_keys):
-                    continue
+    @staticmethod
+    def keep_prediction(product: Product | None, nutrients_keys: list[str]) -> bool:
+        """Return True if the prediction should be kept, false otherwise.
 
-            yield ProductInsight(**prediction.to_dict())
+        The prediction should be kept if:
+        - the product has no nutrition information
+        - the prediction brings new nutrient values that are missing in the product
+
+        :param product: the product
+        :param nutrients_keys: the nutrient keys predicted by the model
+        :return: True if the prediction should be kept, false otherwise
+        """
+        if product is None or not product.nutriments:
+            # We don't have access to MongoDB or the nutriment data is missing
+            # completely, so we generate an insight
+            return True
+
+        if product.nutrition_data_per not in ("100g", "serving"):
+            raise ValueError(
+                f"Invalid nutrition data per: {product.nutrition_data_per}"
+            )
+
+        # Only keep the nutrient that are either per "100g" or "per serving"
+        # depending on `product.nutrition_data_per`, so that we know which
+        # nutrient values the prediction brings
+        current_keys = set(
+            key
+            for key in product.nutriments.keys()
+            if key.endswith(f"_{product.nutrition_data_per}")
+        )
+
+        if product.nutrition_data_per == "serving" and product.serving_size:
+            current_keys.add("serving_size")
+
+        prediction_keys = set(
+            key
+            for key in nutrients_keys
+            if (key.endswith(f"_{product.nutrition_data_per}"))
+        )
+        if product.nutrition_data_per == "serving" and "serving_size" in nutrients_keys:
+            prediction_keys.add("serving_size")
+
+        # If the prediction brings a nutrient value that is missing in
+        # the product, we generate an insight, otherwise we
+        # skip it
+        add_information = bool(len(prediction_keys - current_keys))
+        return add_information
 
     @classmethod
     def is_conflicting_insight(
@@ -1559,6 +1605,31 @@ class NutrientExtractionImporter(InsightImporter):
     ) -> bool:
         # Only one insight per product
         return True
+
+    @classmethod
+    def add_optional_fields(cls, insight: ProductInsight, product: Product | None):
+        """Add campaigns for the `nutrient_extraction` insight.
+
+        We always add one of the following campaigns:
+        - missing-nutrition: the product has no nutrition information
+        - incomplete-nutrition: the product has some nutrition information but the
+            prediction brings new nutrient values
+        """
+        if not product:
+            # We cannot know whether the product has incomplete or missing nutrition
+            # Stop here
+            return
+
+        campaigns: list[str] = []
+        if set(product.nutriments.keys()):
+            # The product already has some nutrient values, so we add it to the
+            # `incomplete-nutrition` campaign. Robotoff clients will be able to
+            # ask for incomplete nutrition insights only if they need to by
+            # specifying this campaign in the request.
+            campaigns.append("incomplete-nutrition")
+        else:
+            campaigns.append("missing-nutrition")
+        insight.campaign = campaigns
 
 
 class PackagingElementTaxonomyException(Exception):
@@ -2096,3 +2167,6 @@ def get_product_predictions(
         where_clauses.append(PredictionModel.type.in_(prediction_types))
 
     yield from PredictionModel.select().where(*where_clauses).dicts().iterator()
+
+
+function_cache_register.register(get_authorized_labels)
