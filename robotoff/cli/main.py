@@ -5,6 +5,7 @@ from typing import Optional
 import typer
 
 from robotoff.types import (
+    ImportImageFlag,
     ObjectDetectionModel,
     PredictionType,
     ProductIdentifier,
@@ -58,12 +59,19 @@ def process_updates_since(
     )
 ):
     """Process all updates since a given datetime."""
+    from robotoff import settings
     from robotoff.utils.logger import get_logger
-    from robotoff.workers.update_listener import process_updates_since
+    from robotoff.workers.update_listener import UpdateListener, get_redis_client
 
     logger = get_logger()
     logger.info("Processing Redis updates since %s", since)
-    process_updates_since(since)
+    redis_client = get_redis_client()
+    update_listener = UpdateListener(
+        redis_client=redis_client,
+        redis_stream_name=settings.REDIS_STREAM_NAME,
+        redis_latest_id_key=settings.REDIS_LATEST_ID_KEY,
+    )
+    update_listener.process_updates_since(since)
 
 
 @app.command()
@@ -319,6 +327,11 @@ def refresh_insights(
         None,
         help="Refresh a specific product. If not provided, all products are updated",
     ),
+    prediction_type: Optional[PredictionType] = typer.Option(
+        None,
+        help="Type of the prediction to refresh, if any. This option is only "
+        "used when --barcode is not used.",
+    ),
     server_type: ServerType = typer.Option(
         ServerType.off, help="Server type of the product"
     ),
@@ -353,12 +366,15 @@ def refresh_insights(
     else:
         logger.info("Launching insight refresh on full database")
         with db:
+            where_clauses = [PredictionModel.server_type == server_type.name]
+            if prediction_type is not None:
+                where_clauses.append(PredictionModel.type == prediction_type.name)
             product_ids = [
                 ProductIdentifier(barcode, server_type)
-                for (barcode, server_type) in PredictionModel.select(
+                for (barcode,) in PredictionModel.select(
                     fn.Distinct(PredictionModel.barcode)
                 )
-                .where(PredictionModel.server_type == server_type.name)
+                .where(*where_clauses)
                 .tuples()
             ]
 
@@ -607,6 +623,41 @@ def run_object_detection_model(
                 image_url=image_url,
                 triton_uri=triton_uri,
             )
+
+
+@app.command()
+def rerun_import_all_images(
+    server_type: Optional[ServerType] = typer.Option(
+        None, help="Server type of the product"
+    ),
+    limit: Optional[int] = typer.Option(
+        None, help="the maximum number of images to process, defaults to None (all)"
+    ),
+    flags: list[ImportImageFlag] = typer.Option(
+        None, help="Flags to use for image import"
+    ),
+):
+    """Rerun full image import on all images in DB.
+
+    This includes launching all ML models and insight extraction from the image and
+    associated OCR. To control which tasks are rerun, use the --flags option.
+    """
+    from robotoff.workers.tasks.import_image import (
+        rerun_import_all_images as _rerun_import_all_images,
+    )
+
+    flags_ = flags or None
+    count = _rerun_import_all_images(
+        limit=limit, server_type=server_type, flags=flags_, return_count=True
+    )
+    message = (
+        f"rerunning full image import on {count} images, confirm?"
+        if flags_ is None
+        else f"running following tasks ({', '.join(flag.name for flag in flags_)}) on {count} images, confirm?"
+    )
+    if typer.confirm(message):
+        _rerun_import_all_images(limit=limit, server_type=server_type, flags=flags_)
+    typer.echo("The task was successfully scheduled.")
 
 
 @app.command()
@@ -881,7 +932,7 @@ def import_logos(
     """
     from robotoff.cli import logos
     from robotoff.models import db
-    from robotoff.prediction.object_detection import OBJECT_DETECTION_MODEL_VERSION
+    from robotoff.prediction.object_detection import MODELS_CONFIG
     from robotoff.utils import get_logger
 
     logger = get_logger()
@@ -891,9 +942,7 @@ def import_logos(
         imported = logos.import_logos(
             data_path,
             ObjectDetectionModel.universal_logo_detector.value,
-            OBJECT_DETECTION_MODEL_VERSION[
-                ObjectDetectionModel.universal_logo_detector
-            ],
+            MODELS_CONFIG[ObjectDetectionModel.universal_logo_detector].model_version,
             batch_size,
             server_type,
         )

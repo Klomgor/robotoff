@@ -1,5 +1,101 @@
 # Changelog
 
+## [1.59.2](https://github.com/openfoodfacts/robotoff/compare/v1.59.1...v1.59.2) (2024-12-12)
+
+
+### Bug Fixes
+
+* fix the absence of matching synonyms during category insight import ([#1497](https://github.com/openfoodfacts/robotoff/issues/1497)) ([66c5322](https://github.com/openfoodfacts/robotoff/commit/66c532215ae9a0f689631b3e5431b248b2da23c3))
+* remove output_image parameter in detect_from_image_tf ([#1494](https://github.com/openfoodfacts/robotoff/issues/1494)) ([5e43dab](https://github.com/openfoodfacts/robotoff/commit/5e43dabe68391c34bd15343790fca9a2568e26b9))
+* use Python SDK update listener ([#1496](https://github.com/openfoodfacts/robotoff/issues/1496)) ([fb60549](https://github.com/openfoodfacts/robotoff/commit/fb60549e1243351bae08b92d526168b0613459e9))
+
+
+### Technical
+
+* add comments ([fb6c5dc](https://github.com/openfoodfacts/robotoff/commit/fb6c5dc36bf58d0eb99cdbdb266b7e624318368e))
+* allow to specify triton URI as one envvar ([abcc2e5](https://github.com/openfoodfacts/robotoff/commit/abcc2e5a83aa40d1d422c99e846727a9cd0ed75b))
+
+## [1.59.1](https://github.com/openfoodfacts/robotoff/compare/v1.59.0...v1.59.1) (2024-12-10)
+
+
+### Bug Fixes
+
+* improve nutrition post-processing ([#1490](https://github.com/openfoodfacts/robotoff/issues/1490)) ([946c73b](https://github.com/openfoodfacts/robotoff/commit/946c73bcca63af0ace67779e817aca0504030f29))
+* improve resources caching ([#1492](https://github.com/openfoodfacts/robotoff/issues/1492)) ([bb72dce](https://github.com/openfoodfacts/robotoff/commit/bb72dcedb196fb1040da3aa6fda5138c0f9e99d0))
+
+
+### Technical
+
+* use openfoodfacts.ml for object detection ([#1493](https://github.com/openfoodfacts/robotoff/issues/1493)) ([54843be](https://github.com/openfoodfacts/robotoff/commit/54843bec061113a3aeec675a72cc6e4873baa989))
+
+## [1.59.0](https://github.com/openfoodfacts/robotoff/compare/v1.58.0...v1.59.0) (2024-12-06)
+
+
+### Features
+
+* improve /image_predictions route ([#1489](https://github.com/openfoodfacts/robotoff/issues/1489)) ([63add1f](https://github.com/openfoodfacts/robotoff/commit/63add1f300623d3c9a55a8a2e4b68796add3ba7a))
+
+
+### Bug Fixes
+
+* **nutrisight:** improve extraction postprocessing ([#1486](https://github.com/openfoodfacts/robotoff/issues/1486)) ([4137468](https://github.com/openfoodfacts/robotoff/commit/41374686ec409788787009e1e40acd22ba27306f))
+* support votes on GET /api/v1/insights route ([#1488](https://github.com/openfoodfacts/robotoff/issues/1488)) ([33645a6](https://github.com/openfoodfacts/robotoff/commit/33645a63ab7c01275df45695cd44f59db137b3e6))
+
+## [1.58.0](https://github.com/openfoodfacts/robotoff/compare/v1.57.5...v1.58.0) (2024-12-05)
+
+
+### Features
+
+* Improve nutrition extraction ([#1484](https://github.com/openfoodfacts/robotoff/issues/1484)) ([2430741](https://github.com/openfoodfacts/robotoff/commit/2430741adad4f3d552d247d1a98afb9c4522b021))
+
+
+### Technical
+
+* New Crowdin translations to review and merge ([#1338](https://github.com/openfoodfacts/robotoff/issues/1338)) ([e310700](https://github.com/openfoodfacts/robotoff/commit/e3107009c098bf1327a31de130a32d09c9e9682f))
+
+## [1.57.5](https://github.com/openfoodfacts/robotoff/compare/v1.57.4...v1.57.5) (2024-12-04)
+
+
+### Bug Fixes
+
+* add new CLI command to rerun image import for all images ([#1482](https://github.com/openfoodfacts/robotoff/issues/1482)) ([98a1374](https://github.com/openfoodfacts/robotoff/commit/98a13742e62b0b4653559e3c02fadbbb6a39e335))
+
+## [1.57.4](https://github.com/openfoodfacts/robotoff/compare/v1.57.3...v1.57.4) (2024-12-04)
+
+
+### Bug Fixes
+
+* improve nutrition extraction ([#1479](https://github.com/openfoodfacts/robotoff/issues/1479)) ([730c132](https://github.com/openfoodfacts/robotoff/commit/730c13272d8c9412afd5905f6b790a3b3e01b457))
+
+## [1.57.3](https://github.com/openfoodfacts/robotoff/compare/v1.57.2...v1.57.3) (2024-12-04)
+
+
+### Bug Fixes
+
+* allow to filter insights by campaign ([#1477](https://github.com/openfoodfacts/robotoff/issues/1477)) ([8079258](https://github.com/openfoodfacts/robotoff/commit/807925874d0869748f268f3f155e72d995c7cee8))
+
+## [1.57.2](https://github.com/openfoodfacts/robotoff/compare/v1.57.1...v1.57.2) (2024-12-03)
+
+
+### Bug Fixes
+
+* fix refresh-insights command ([0752727](https://github.com/openfoodfacts/robotoff/commit/07527275baf2f81e6d04e28c931ff2938a957bc7))
+
+## [1.57.1](https://github.com/openfoodfacts/robotoff/compare/v1.57.0...v1.57.1) (2024-12-03)
+
+
+### Bug Fixes
+
+* add campaign for NutrientExtraction insights ([4d8d752](https://github.com/openfoodfacts/robotoff/commit/4d8d752329ffaa6b254e7fe26c00648184dd6f16))
+* improve refresh-insights command ([262479a](https://github.com/openfoodfacts/robotoff/commit/262479a9ed7baa4df3767a1d27add4c3ccf99fd2))
+
+## [1.57.0](https://github.com/openfoodfacts/robotoff/compare/v1.56.6...v1.57.0) (2024-12-03)
+
+
+### Features
+
+* add nutrition annotation ([#1473](https://github.com/openfoodfacts/robotoff/issues/1473)) ([cbe570e](https://github.com/openfoodfacts/robotoff/commit/cbe570ea893cfd4acd67443a326eb2e05cc6981a))
+
 ## [1.56.6](https://github.com/openfoodfacts/robotoff/compare/v1.56.5...v1.56.6) (2024-12-01)
 
 

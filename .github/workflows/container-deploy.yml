@@ -137,6 +137,7 @@ jobs:
           echo "REDIS_HOST=redis.robotoff_default" >> .env
           echo "REDIS_UPDATE_HOST=${{ env.REDIS_UPDATE_HOST }}" >> .env
           echo "REDIS_UPDATE_PORT=6379" >> .env
+          echo "REDIS_STREAM_NAME=product_updates" >> .env
           # We use local PostgreSQL instance with `robotoff_default` network,
           # so that there is no possibility of conflict with PO PostgreSQL instance.
           echo "POSTGRES_HOST=postgres.robotoff_default" >> .env
@@ -150,7 +151,7 @@ jobs:
           echo "ELASTIC_HOST=elasticsearch.robotoff_default" >> .env
           echo "ELASTIC_USER=elastic" >> .env
           echo "ELASTIC_PASSWORD=${{ secrets.ELASTIC_PASSWORD }}" >> .env
-          echo "TRITON_HOST=triton" >> .env
+          echo "TRITON_URI=triton:8001" >> .env
           echo "TRITON_MODELS_DIR=./models/triton" >> .env
           echo "FASTTEXT_HOST=fasttext" >> .env
           echo "FASTTEXT_MODEL_DIR=./models" >> .env
