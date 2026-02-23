@@ -58,9 +58,13 @@ def get_taxonomy(taxonomy_type: TaxonomyType | str, offline: bool = False) -> Ta
       defaults to False. It's not available for all taxonomy types.
     :return: the Taxonomy
     """
-    taxonomy_offline_path = str(settings.TAXONOMY_PATHS[taxonomy_type])
+    taxonomy_offline_path = settings.TAXONOMY_PATHS.get(taxonomy_type)
     cache_dir = settings.DATA_DIR / "taxonomies"
     if offline:
+        if taxonomy_offline_path is None:
+            raise ValueError(
+                f"No offline version of taxonomy {taxonomy_type} is available."
+            )
         return Taxonomy.from_path(taxonomy_offline_path)
 
     taxonomy_type_enum = (
@@ -101,6 +105,11 @@ def get_taxonomy(taxonomy_type: TaxonomyType | str, offline: bool = False) -> Ta
         taxonomy_type,
         taxonomy_offline_path,
     )
+
+    if taxonomy_offline_path is None:
+        raise ValueError(
+            f"No offline version of taxonomy {taxonomy_type} is available."
+        )
     return Taxonomy.from_path(taxonomy_offline_path)
 
 
