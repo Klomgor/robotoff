@@ -36,6 +36,13 @@ triton_version = 1
 type = "single_file"
 model_path = "weights/model_ir_10_opset_19.onnx"
 
+[[models.price_tag_detection]]
+repo_id = "openfoodfacts/price-tag-detection"
+revision = "597bc8713342c6f8c4c9402055535e3e77db43c3"
+triton_version = 2
+type = "single_file"
+model_path = "weights/model.onnx"
+
 [[models.price_proof_classification]]
 repo_id = "openfoodfacts/price-proof-classification"
 revision = "03c3bad38f4135d755584c346769f3217231cb36"
